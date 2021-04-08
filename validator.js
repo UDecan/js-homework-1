@@ -9,7 +9,6 @@ class Validator {
   
   validateArray(schema, data) {
     if (!Array.isArray(data) && !schema.nullable) {
-      console.log(1);
       this._errors.push('Type is incorrect')
       return false;
     }
@@ -19,13 +18,11 @@ class Validator {
     }
 
     if (data?.length < schema.minItems) {
-      console.log(2);
       this._errors.push('Items count less than can be')
       return false;
     }
 
     if (data?.length > schema.maxItems) {
-      console.log(3);
       this._errors.push('Items count more than can be')
       return false;
     }
