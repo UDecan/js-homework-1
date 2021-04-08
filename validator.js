@@ -8,61 +8,31 @@ class Validator {
   }
   
   validateArray(schema, data) {
-    if (!Array.isArray(data) && !schema.nullable) {
-      console.log(1);
+    if (Array.isArray(data)) {
       this._errors.push('Type is incorrect')
       return false;
     }
 
-    if (!schema.nullable && data === null) {
+    if (data.length < schema.minItems) {
       return false;
     }
 
-    if (data?.length < schema.minItems) {
-      console.log(2);
-      this._errors.push('Items count less than can be')
+    if (data.length > schema.maxItems) {
       return false;
     }
 
-    if (data?.length > schema.maxItems) {
-      console.log(3);
-      this._errors.push('Items count more than can be')
+    if (data.includes(schema.contains) === false) {
       return false;
-    }
-
-    if (schema.contains && !data.map(JSON.stringify).includes(JSON.stringify(schema.contains))) {
-      this._errors.push('Must contain a value, but does not');
-      return false;
-    }
-
-    if (schema.items) {
-      if (schema.items.type) {
-        if (data.some(item => typeof item !== schema.items.type)) {
-          this._errors.push('Type is incorrect');
-          return false;
-        }
-      } else {
-        if (data.some((item, index) => typeof item !== schema.items[index].type)) {
-          this._errors.push('Type is incorrect');
-          return false;
-        }
-      }
-    }
-
-    if (schema.enum) {
-      const jsonArray = schema.enum.map(item => JSON.stringify(item));
-
-      if (!jsonArray.includes(JSON.stringify(data))) {
-        this._errors.push('The enum does not support one of array elements');
-        return false;
-      }
     }
 
     if (schema.uniqueItems) {
-      let mySet = new Set(data.map(item => JSON.stringify(item)));
-
-      if (mySet.size !== data.length) {
-        this._errors.push('Elements of array not unique');
+      const testArray = [];
+      data.forEach((element, index, array) => {
+        if (array.lastindexof(element) === index && !testArray.includes(element)) {
+          testArray.push(element);
+        }
+      });
+      if (testArray.length !== data.length) {
         return false;
       }
     }
@@ -145,6 +115,7 @@ class Validator {
     }
 
     if (!schema.nullable && data === null) {
+      console.log(schema, data);
       return false;
     }
 
