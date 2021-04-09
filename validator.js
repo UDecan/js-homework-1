@@ -8,12 +8,12 @@ class Validator {
   }
   
   validateArray(schema, data) {
-    if (!Array.isArray(data) && !schema.nullable) {
-      this._errors.push('Type is incorrect')
-      return false;
+    if (data === null) {
+      return !!schema.nullable;
     }
 
-    if (!schema.nullable && data === null) {
+    if (!Array.isArray(data)) {
+      this._errors.push('Type is incorrect')
       return false;
     }
 
@@ -136,12 +136,12 @@ class Validator {
   }
 
   validateBoolean(schema, data) {
-    if (typeof data !== 'boolean' && !schema.nullable) {
-      this._errors.push('Type is incorrect');
-      return false;
+    if (data === null) {
+      return !!schema.nullable;
     }
 
-    if (!schema.nullable && data === null) {
+    if (typeof data !== 'boolean') {
+      this._errors.push('Type is incorrect');
       return false;
     }
 
@@ -149,18 +149,14 @@ class Validator {
   }
 
   validateObject(schema, data) {
-    if ((typeof data !== 'object' || Array.isArray(data)) && !schema.nullable) {
+    if (data === null) {
+      return !!schema.nullable;
+    }
+
+    if ((typeof data !== 'object' || Array.isArray(data))) {
       this._errors.push('Type is incorrect');
       return false;
     }
-
-    if (!schema.nullable && data === null) {
-      return false;
-    }
-
-    // if (schema.minProperties && Object.keys(data).length < schema.minProperties) {
-    //   return false;
-    // }
 
     if (Object.keys(data).length < schema.minProperties) {
      this._errors.push('Too few properties in object');
@@ -174,16 +170,44 @@ class Validator {
     
     if (schema.required && !schema.required.every(field => field in data)) {
       this._errors.push('Property required, but value is undefined');
-      console.log(schema.required.every(field => field in data), schema, data);
       return false;
     }
 
-    if (condition) {
+    if (schema.properties && schema.additionalProperties === false &&
+      Object.keys(schema.properties).length !== Object.keys(data).length) {
+        this._errors.push('An object cant have additional properties');
+
+      return false;
+    }
+
+    if (schema.properties) {
+      const valid = Object.keys(schema.properties).every((element) => {
+        const localSchema = schema.properties[element];
+        const localData = data[element];
+        return this.isValid(localSchema, localData);
+      });
       
+      if (!valid) {
+        this._errors.push('Type is incorrect');
+        return false;
+      }
     }
 
     return true;
-   }
+  }
+  
+  validateGeneral(schema, data) {
+    if (!schema.nullable && data === null) {
+      return false;
+    }
+
+    if (data === null && schema.nullable === false) {
+      this._errors.push('Value is null, but nullable false');
+      return false;
+    }
+    
+    return true;
+  }
 
   /**
    *
@@ -192,6 +216,38 @@ class Validator {
    * @returns {boolean}
    */
   isValid(schema = {}, dataToValidate) {
+
+    // if (!validateGeneral(schema, dataToValidate)) {
+    //   return false;
+    // }
+
+    if (schema.anyOf) {
+      const valid = schema.anyOf.some(localSchema => this.isValid(localSchema, dataToValidate));
+            
+      if (!valid) {
+        this._errors.push('None schemas are valid');
+      }
+
+      return valid;
+    }
+
+    if (schema.oneOf) {
+      let numberValide = 0;
+      schema.oneOf.forEach(localSchema => {
+        if (this.isValid(localSchema, dataToValidate)) {
+          numberValide++;
+        }
+      });
+
+      const valid = numberValide === 1;
+
+      if (!valid) {
+        this._errors.push('More than one shema valid for this data');
+      }
+
+      return valid;
+    }
+
     switch (schema.type) {
       case 'string':
         return this.validateString(schema, dataToValidate);
@@ -204,6 +260,7 @@ class Validator {
       case 'boolean':
         return this.validateBoolean(schema, dataToValidate);
       default:
+        this._errors.push('Unknown type');
         return false;
     }
   }
