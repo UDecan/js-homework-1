@@ -154,10 +154,34 @@ class Validator {
       return false;
     }
 
-    if (data > schema.minProperties) {
-      this._errors.push('Type is incorrect');
+    if (!schema.nullable && data === null) {
       return false;
     }
+
+    // if (schema.minProperties && Object.keys(data).length < schema.minProperties) {
+    //   return false;
+    // }
+
+    if (Object.keys(data).length < schema.minProperties) {
+     this._errors.push('Too few properties in object');
+      return false;
+    } 
+
+    if (Object.keys(data).length > schema.maxProperties) {
+      this._errors.push('Too many properties in object');
+       return false;
+    }
+    
+    if (schema.required && !schema.required.every(field => field in data)) {
+      this._errors.push('Property required, but value is undefined');
+      console.log(schema.required.every(field => field in data), schema, data);
+      return false;
+    }
+
+    if (condition) {
+      
+    }
+
     return true;
    }
 
