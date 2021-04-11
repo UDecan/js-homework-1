@@ -17,12 +17,12 @@ class Validator {
       return false;
     }
 
-    if (data?.length < schema.minItems) {
+    if (data.length < schema.minItems) {
       this._errors.push('Items count less than can be')
       return false;
     }
 
-    if (data?.length > schema.maxItems) {
+    if (data.length > schema.maxItems) {
       this._errors.push('Items count more than can be')
       return false;
     }
@@ -196,19 +196,6 @@ class Validator {
     return true;
   }
   
-  validateGeneral(schema, data) {
-    if (!schema.nullable && data === null) {
-      return false;
-    }
-
-    if (data === null && schema.nullable === false) {
-      this._errors.push('Value is null, but nullable false');
-      return false;
-    }
-    
-    return true;
-  }
-
   /**
    *
    * @param schema
@@ -217,18 +204,28 @@ class Validator {
    */
   isValid(schema = {}, dataToValidate) {
 
-    // if (!validateGeneral(schema, dataToValidate)) {
-    //   return false;
-    // }
+    if (dataToValidate === null) {
+      if (!schema.nullable) {
+        this._errors.push('Value is null, but nullable false');
+      }
+      return !!schema.nullable;
+    }
 
-    if (schema.anyOf) {
-      const valid = schema.anyOf.some(localSchema => this.isValid(localSchema, dataToValidate));
-            
-      if (!valid) {
+    if (schema.anyOf) {            
+      let numberValide = 0;
+      schema.anyOf.forEach(localSchema => {
+        if (this.isValid(localSchema, dataToValidate)) {
+          numberValide++;
+        }
+      });
+
+      this._errors = [];
+
+      if (!numberValide) {
         this._errors.push('None schemas are valid');
       }
 
-      return valid;
+      return !!numberValide;
     }
 
     if (schema.oneOf) {
@@ -239,13 +236,17 @@ class Validator {
         }
       });
 
-      const valid = numberValide === 1;
+      this._errors = [];
 
-      if (!valid) {
+      if (numberValide > 1) {
         this._errors.push('More than one shema valid for this data');
       }
 
-      return valid;
+      if (!numberValide) {
+        this._errors.push('None schemas are valid');
+      }
+
+      return numberValide === 1;
     }
 
     switch (schema.type) {
